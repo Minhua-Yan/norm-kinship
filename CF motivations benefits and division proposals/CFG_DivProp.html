@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="MinhuaYan" />
+
+<meta name="date" content="2025-02-17" />
+
+<title>socialPayoffs</title>
+
+<script src="CFG_DivProp_files/header-attrs-2.29/header-attrs.js"></script>
+<script src="CFG_DivProp_files/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="CFG_DivProp_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="CFG_DivProp_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="CFG_DivProp_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="CFG_DivProp_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="CFG_DivProp_files/navigation-1.1/tabsets.js"></script>
+<link href="CFG_DivProp_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="CFG_DivProp_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">socialPayoffs</h1>
+<h4 class="author">MinhuaYan</h4>
+<h4 class="date">2025-02-17</h4>
+
+</div>
+
+
+<pre class="r"><code>library(nnet)
+library(openxlsx)
+library(xtable)
+library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(purrr)
+#library(magrittr); requireNamespace(&quot;tidyr&quot;);
+
+
+library(ggplot2)
+library(ggpattern)
+library(polycor)
+library(data.table)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;data.table&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:purrr&#39;:
+## 
+##     transpose</code></pre>
+<pre><code>## The following objects are masked from &#39;package:dplyr&#39;:
+## 
+##     between, first, last</code></pre>
+<pre class="r"><code>library(stringr)
+library(stringi)
+library(forcats)
+library(here)</code></pre>
+<pre><code>## here() starts at C:/Users/Minhua Yan/ASU Dropbox/Minhua Yan/DDRIG/CFpartnerChoice/CF motivations benefits and division proposals</code></pre>
+<pre class="r"><code>library(binom)
+library(scales)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;scales&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:purrr&#39;:
+## 
+##     discard</code></pre>
+<pre class="r"><code>library(rstatix)</code></pre>
+<pre><code>## Warning: package &#39;rstatix&#39; was built under R version 4.5.3</code></pre>
+<pre><code>## 
+## Attaching package: &#39;rstatix&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:stats&#39;:
+## 
+##     filter</code></pre>
+<pre class="r"><code>library(brms)</code></pre>
+<pre><code>## Warning: package &#39;brms&#39; was built under R version 4.5.3</code></pre>
+<pre><code>## Loading required package: Rcpp</code></pre>
+<pre><code>## Loading &#39;brms&#39; package (version 2.23.0). Useful instructions
+## can be found by typing help(&#39;brms&#39;). A more detailed introduction
+## to the package is available through vignette(&#39;brms_overview&#39;).</code></pre>
+<pre><code>## 
+## Attaching package: &#39;brms&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:stats&#39;:
+## 
+##     ar</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-2-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># dataframe of land farmed by each kin group
+# prepare data
+kin_area = kin %&gt;%
+  filter(area != &quot;NAPP&quot; &amp; div_no_NOorYAMorVEGGIE_diff != &quot;NEED&quot;)
+
+kin_area$area = as.numeric(kin_area$area)
+kin_area$num_CF_HH &lt;- as.numeric(as.character(kin_area$num_CF_HH))
+
+kin_area &lt;- kin_area %&gt;%
+  mutate(area_perHH = area / num_CF_HH)</code></pre>
+<pre class="r"><code># This next section creates plotting dataframes to plot area farmed per CFG
+# Count frequency of each area value within each &#39;involves&#39; group
+kin_area_count_CFG &lt;-  kin_area %&gt;%
+  group_by(involves, area) %&gt;%
+  summarise(freq = n(), .groups = &quot;drop&quot;)
+
+# Compute mean and standard deviation per &#39;involves&#39; group
+summary_stats &lt;-  kin_area %&gt;%
+  group_by(involves) %&gt;%
+  summarise(
+    mean_area = mean(area),
+    sd_area = sd(area),
+    .groups = &quot;drop&quot;
+  )
+
+# Merge data for plotting
+df_plot1 &lt;- left_join(kin_area_count_CFG, summary_stats, by = &quot;involves&quot;)
+df_plot1$involves &lt;- factor(df_plot1$involves, levels = relation_order)
+
+# Create the plot
+ggplot(df_plot1, aes(x = involves)) +
+  # Error bars (±1 SD)
+  geom_errorbar(aes(ymin = mean_area - sd_area, ymax = mean_area + sd_area),
+                width = 0.2, color = &quot;black&quot;) +
+  
+  # Red horizontal line at mean (corrected)
+  geom_segment(aes(x = as.numeric(involves) - 0.3,
+                   xend = as.numeric(involves) + 0.3,
+                   y = mean_area,
+                   yend = mean_area),
+               color = &quot;red&quot;, linewidth = 1.2) +
+  
+  # Scatter dots with size = frequency
+  geom_point(aes(y = area, size = sqrt(freq)),
+             alpha = 0.6)  +
+  scale_size_continuous(
+    range = c(1, 2),             # Radius: freq = 1 → 1 mm, freq = 2 → 2 mm
+    breaks = sqrt(c(1, 2)),      # Legend: use sqrt(freq) values
+    labels = c(1, 2),            # Show actual frequency values
+    name = &quot;Frequency&quot;
+  )  +
+  labs(
+    title = &quot;Cofarming groups&#39; land area co-farmed by relationship category&quot;,
+    x = &quot;Relationship category&quot;,
+    y = &quot;Area (Mu)&quot;
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10), plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-4-1.png" width="960" /></p>
+<pre class="r"><code># This next section manipulates the data to plot area farmed per HH
+# Count frequency of each area value within each &#39;involves&#39; group
+kin_area_count_HH &lt;-  kin_area %&gt;%
+  group_by(involves, area_perHH) %&gt;%
+  summarise(freq = n(), .groups = &quot;drop&quot;)
+
+# Compute mean and standard deviation per &#39;involves&#39; group
+summary_stats &lt;-  kin_area %&gt;%
+  group_by(involves) %&gt;%
+  summarise(
+    mean_area = mean(area_perHH),
+    sd_area = sd(area_perHH),
+    .groups = &quot;drop&quot;
+  )
+
+# Merge data for plotting
+df_plot2 &lt;- left_join(kin_area_count_HH, summary_stats, by = &quot;involves&quot;)
+df_plot2$involves &lt;- factor(df_plot2$involves, levels = relation_order)
+
+# Create the plot
+ggplot(df_plot2, aes(x = involves)) +
+  # Error bars (±1 SD)
+  geom_errorbar(aes(ymin = mean_area - sd_area, ymax = mean_area + sd_area),
+                width = 0.2, color = &quot;black&quot;) +
+  
+  # Red horizontal line at mean (corrected)
+  geom_segment(aes(x = as.numeric(involves) - 0.3,
+                   xend = as.numeric(involves) + 0.3,
+                   y = mean_area,
+                   yend = mean_area),
+               color = &quot;red&quot;, linewidth = 1.2) +
+  
+  # Scatter dots with size = frequency
+  geom_point(aes(y = area_perHH, size = freq),
+             alpha = 0.6)   +
+   scale_size_continuous(
+     range = c(1, 2),             # Radius: freq = 1 → 1 mm, freq = 2 → 2 mm
+     breaks = sqrt(c(1, 2)),      # Legend: use sqrt(freq) values
+     labels = c(1, 2),            # Show actual frequency values
+     name = &quot;Frequency&quot;
+   ) +
+  labs(
+    title = &quot;Per-household land area co-farmed by relationship category&quot;,
+    x = &quot;Relationship category&quot;,
+    y = &quot;Area (Mu)&quot;
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10), plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-5-1.png" width="960" /></p>
+<pre class="r"><code>df_CFPrsn = read.xlsx(here(&quot;CFP_reason.xlsx&quot;), sheet=1)
+
+# Remove substrings that include additional info: &quot;()&quot;
+df_CFPrsn$organizer_RSN &lt;- gsub(&quot; \\(.*?\\)&quot;, &quot;&quot;, df_CFPrsn$organizer_RSN)
+
+# Vector of the column names to sort
+cfp_cols &lt;- paste0(&quot;CFP&quot;, 1:7)
+
+
+# sort the CF partnerships based on CFP1 to  CFP7
+df_CFPrsn &lt;- df_CFPrsn %&gt;%
+  arrange(across(all_of(cfp_cols)))
+
+
+df_inviterMotive &lt;- df_CFPrsn %&gt;%
+  filter(!is.na(organizer_RSN), organizer_RSN != &quot;MISSING&quot;)</code></pre>
+<pre class="r"><code># motives for an inviter to propose cofarming
+reason_counts_by_rel &lt;- df_inviterMotive %&gt;%
+  # Step 1: split comma-separated RSN values into lists
+  mutate(RSN_split = str_split(organizer_RSN, &quot;,&quot;)) %&gt;%
+  # Step 2: unnest so each reason has its own row
+  unnest(RSN_split) %&gt;%
+  # Step 3: trim spaces
+  mutate(RSN_split = str_trim(RSN_split)) %&gt;%
+  # Step 4: create a flag for NON vs Kin/Friend
+  mutate(rel_type = if_else(relationship == &quot;NON&quot;, &quot;Not kin or friend&quot;, &quot;Kin or friend&quot;)) %&gt;%
+  # Step 5: count per reason and relationship type
+  count(RSN_split, rel_type, name = &quot;freq&quot;) %&gt;%
+  arrange(RSN_split, rel_type)
+  
+singletons &lt;- reason_counts_by_rel %&gt;%
+  group_by(RSN_split) %&gt;%
+  summarise(total_freq = sum(freq, na.rm = TRUE), .groups = &quot;drop&quot;) %&gt;%
+  filter(total_freq == 1) %&gt;%
+  pull(RSN_split)
+
+# 2) Replace singletons with &quot;Other reasons&quot; and re-aggregate
+reason_prop_by_rel &lt;- reason_counts_by_rel %&gt;%
+  mutate(
+    RSN_split = if_else(RSN_split %in% singletons, &quot;Other reasons&quot;, RSN_split)
+  ) %&gt;%
+  group_by(RSN_split, rel_type) %&gt;%
+  summarise(freq = sum(freq, na.rm = TRUE), .groups = &quot;drop&quot;) %&gt;%
+  # 3) compute prop within each relationship
+  group_by(rel_type) %&gt;%
+  mutate(prop = round(freq / sum(freq, na.rm = TRUE), 3)) %&gt;%
+  ungroup()
+  
+
+rsn_order = c(&quot;Resource complementarity&quot;,  &#39;Pool labor&#39;, &quot;Pool seeds&quot;, &quot;Inviter wants to help invitee(s)&quot;, &#39;Inviter needs help from invitee(s)&#39;, &#39;Cofarming merely because the cofarmers are kin or friends&#39;,  &quot;Cofarming more land due to existing cofarming&quot;, &quot;Cofarming because the crop is yam&quot;,  &quot;Other Reasons&quot;, &quot;No Reason&quot;)
+
+
+reason_prop_by_rel$RSN_split = stri_replace_all_regex(reason_prop_by_rel$RSN_split,
+                    pattern=c(&#39;Complement&#39;,&#39;POOLLB&#39;,&quot;POOLSEED&quot;,&#39;HELPCFP&#39;,&#39;NEEDinput&#39;,&#39;Bond&#39;, &#39;EXISTCF&#39;, &quot;YAM&quot;,  &quot;Other reasons&quot;, &quot;NOREASON&quot;),
+                                  replacement=rsn_order,
+                                  vectorize=FALSE)
+
+reason_prop_with_err &lt;- reason_prop_by_rel %&gt;%
+  # Ensure the two keys exist and fill missing combos with freq = 0
+  complete(rel_type, RSN_split, fill = list(freq = 0)) %&gt;%
+  group_by(rel_type) %&gt;%
+  mutate(
+    n_total = sum(freq, na.rm = TRUE),
+    x = freq,
+    p = if_else(n_total &gt; 0, x / n_total, NA_real_)
+  ) %&gt;%
+  rowwise() %&gt;%
+  mutate(
+    CI_lower = if (n_total &gt; 0) binom.confint(x, n_total, method = &quot;exact&quot;, conf.level = 0.90)$lower else NA_real_,
+    CI_upper = if (n_total &gt; 0) binom.confint(x, n_total, method = &quot;exact&quot;, conf.level = 0.90)$upper else NA_real_
+  ) %&gt;%
+  ungroup() %&gt;%
+  mutate(
+    prop_label = percent(p, accuracy = 0.1)
+  )</code></pre>
+<pre class="r"><code># preparation for plotting inviter motives
+gaps &lt;- paste0(&quot;&lt;&lt;gap_&quot;, seq_len(length(rsn_order) + 1), &quot;&gt;&gt;&quot;)
+# interleave: gap1, reason1, gap2, reason2, ..., gapN, reasonN, gapN+1
+rsn_order_with_gaps &lt;- as.vector(rbind(gaps[-length(gaps)], rsn_order))
+rsn_order_with_gaps &lt;- c(rsn_order_with_gaps, tail(gaps, 1))
+
+# reverse so the first reason appears at TOP after coord_flip()
+levels_with_gaps &lt;- rev(rsn_order_with_gaps)
+
+# --- build plotting data; keep factor THROUGH complete() ---
+plot_dat2 &lt;- reason_prop_with_err %&gt;%
+  select(RSN_split, rel_type, prop, CI_lower, CI_upper) %&gt;%
+  mutate(
+    RSN_split = factor(RSN_split, levels = levels_with_gaps),
+    rel_type  = factor(rel_type, levels = c(&quot;Not kin or friend&quot;,&quot;Kin or friend&quot;))
+  ) %&gt;%
+  complete(
+    RSN_split = factor(levels_with_gaps, levels = levels_with_gaps),  # &lt;- pass factor
+    rel_type  = levels(rel_type),
+    fill = list(prop = 0)
+  ) %&gt;%
+  mutate(RSN_split = factor(RSN_split, levels = levels_with_gaps),
+         rel_type  = factor(rel_type, levels = c(&quot;Not kin or friend&quot;,&quot;Kin or friend&quot;)))    # reassert
+
+
+eps &lt;- 0.001  # tiny visible height for zeros
+
+show_err &lt;-  c(&quot;Resource complementarity&quot;,  &#39;Pool labor&#39;, &quot;Pool seeds&quot;, &quot;Inviter wants to help invitee(s)&quot;, &#39;Inviter needs help from invitee(s)&#39;, &#39;Cofarming merely because the cofarmers are kin or friends&#39;,  &quot;Cofarming more land due to existing cofarming&quot;, &quot;Cofarming because the crop is yam&quot;,  &quot;Other Reasons&quot;, &quot;No Reason&quot;)
+
+plot_dat2 &lt;- plot_dat2 %&gt;%
+  mutate(prop_plot = if_else(prop == 0, eps, as.numeric(prop))) %&gt;%
+    mutate(
+    show_err = !grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, RSN_split) &amp; as.character(RSN_split) %in% show_err,
+    CI_lower_plot = ifelse(show_err, CI_lower, NA_real_),
+    CI_upper_plot = ifelse(show_err, CI_upper, NA_real_)
+  ) %&gt;%
+  mutate(RSN_split = factor(RSN_split, levels = levels_with_gaps),
+         rel_type  = factor(rel_type, levels = c(&quot;Not kin or friend&quot;,&quot;Kin or friend&quot;)))   # reassert 
+
+
+# helper to hide gap labels
+axis_lab &lt;- function(x) ifelse(grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, x), &quot;&quot;, x)</code></pre>
+<pre><code>## Warning: `position_dodge()` requires non-overlapping x intervals.</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-9-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># fisher&#39;s exact test for whether the prevalance of a reason differs based on relationship type
+results &lt;- reason_prop_with_err %&gt;%
+  group_by(RSN_split) %&gt;%
+  summarise(
+    test = list({
+      # Build 2×2 table for this reason
+      tab &lt;- matrix(
+        c(
+          sum(freq[rel_type == &quot;Kin or friend&quot;]),        # successes in kin/friend
+          unique(n_total[rel_type == &quot;Kin or friend&quot;]) - sum(freq[rel_type == &quot;Kin or friend&quot;]),  # failures in kin/friend
+          sum(freq[rel_type == &quot;Not kin or friend&quot;]),    # successes in not kin/friend
+          unique(n_total[rel_type == &quot;Not kin or friend&quot;]) - sum(freq[rel_type == &quot;Not kin or friend&quot;]) # failures in not kin/friend
+        ),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(
+          rel_type = c(&quot;Kin/friend&quot;, &quot;Not kin/friend&quot;),
+          outcome  = c(&quot;Reason present&quot;, &quot;Reason absent&quot;)
+        )
+      )
+
+      fisher.test(tab)  # use exact test (robust with small n and 0’s)
+    }),
+    .groups = &quot;drop&quot;
+  ) %&gt;%
+  mutate(
+    p_value   = map_dbl(test, ~ .x$p.value),
+    estimate  = map_dbl(test, ~ ifelse(is.null(.x$estimate), NA_real_, .x$estimate)),
+    conf_low  = map_dbl(test, ~ ifelse(is.null(.x$conf.int), NA_real_, .x$conf.int[1])),
+    conf_high = map_dbl(test, ~ ifelse(is.null(.x$conf.int), NA_real_, .x$conf.int[2]))
+  ) %&gt;%
+  select(-test)
+
+results</code></pre>
+<pre><code>## # A tibble: 10 × 5
+##    RSN_split                                 p_value estimate conf_low conf_high
+##    &lt;chr&gt;                                       &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+##  1 Cofarming because the crop is yam          1       Inf      0.0612    Inf    
+##  2 Cofarming merely because the cofarmers a…  0.570   Inf      0.215     Inf    
+##  3 Cofarming more land due to existing cofa…  0.0956    0.202  0.0159      1.88 
+##  4 Inviter needs help from invitee(s)         0.410     0.635  0.203       2.14 
+##  5 Inviter wants to help invitee(s)           0.0542    4.34   0.931      41.2  
+##  6 No Reason                                  1         0.986  0.0751     53.9  
+##  7 Other Reasons                              1       Inf      0.00845   Inf    
+##  8 Pool labor                                 0.0344  Inf      1.10      Inf    
+##  9 Pool seeds                                 1         0.652  0.0326     39.8  
+## 10 Resource complementarity                   0.0128    0.267  0.0877      0.803</code></pre>
+<pre class="r"><code># Distribution of non-organizers&#39; reported benefits of CF compared to IF
+df_CFPbnft = df_CFPrsn %&gt;%
+  filter(!is.na(invitee_benefit), invitee_benefit != &quot;MISSING&quot;) %&gt;%
+  mutate(invitee_benefit = recode(invitee_benefit,
+                        &quot;PRFIF&quot;   = &quot;PRFIForLSHH&quot;,
+                        &quot;PRFLSHH&quot; = &quot;PRFIForLSHH&quot;))
+  
+
+benefit_by_rel &lt;- df_CFPbnft %&gt;%
+  # Step 0: remove information about which respondent reported which benefit
+  mutate(invitee_benefit = gsub(&quot;SB[^:]+: &quot;, &quot;&quot;, invitee_benefit)) %&gt;%
+  # Step 1: split comma-separated benefits values into lists
+  mutate(BNFT_split = str_split(invitee_benefit, &quot;;&quot;)) %&gt;%
+  # Step 2: unnest so each reason has its own row
+  unnest(BNFT_split) %&gt;%
+  # Step 3: trim spaces
+  mutate(BNFT_split = str_trim(BNFT_split)) %&gt;%
+  # Step 4: create a flag for NON vs Kin/Friend
+  mutate(rel_type = if_else(relationship == &quot;NON&quot;, &quot;Not kin or friend&quot;, &quot;Kin or friend&quot;)) %&gt;%
+  # Step 5: count per reason and relationship type
+  count(BNFT_split, rel_type, name = &quot;freq&quot;) %&gt;%
+  arrange(BNFT_split, rel_type) %&gt;%
+  # 3) compute prop within each relationship
+  group_by(rel_type) %&gt;%
+  mutate(prop = round(freq / sum(freq, na.rm = TRUE), 3)) %&gt;%
+  ungroup()
+
+bnft_order = c(&quot;Partner(s) provide resources&quot;,&quot;Resource complementarity&quot;,&#39;Pool labor&#39;, &quot;Co-farming has no benefit&quot;, &quot;Prefers single-household farming or smaller-group co-farming&quot;)
+
+benefit_by_rel$BNFT_split = stri_replace_all_regex(benefit_by_rel$BNFT_split,
+                    pattern=c(&#39;INPUT&#39;,&#39;Ecological Complementarity&#39;,&#39;POOLLB&#39;,&#39;NOBNFT&#39;,&#39;PRFIForLSHH&#39;),
+                                  replacement=bnft_order,
+                                  vectorize=FALSE)
+
+benefit_prop_with_err &lt;- benefit_by_rel %&gt;%
+  complete(rel_type, BNFT_split, fill = list(freq = 0)) %&gt;%
+  group_by(rel_type) %&gt;%
+  mutate(
+    n_total = sum(freq, na.rm = TRUE),
+    x = freq,
+    p = if_else(n_total &gt; 0, x / n_total, NA_real_)
+  ) %&gt;%
+  rowwise() %&gt;%
+  mutate(
+    CI_lower = if (n_total &gt; 0) binom.confint(x, n_total, method = &quot;exact&quot;, conf.level = 0.90)$lower else NA_real_,
+    CI_upper = if (n_total &gt; 0) binom.confint(x, n_total, method = &quot;exact&quot;, conf.level = 0.90)$upper else NA_real_
+  ) %&gt;%
+  ungroup() %&gt;%
+  mutate(
+    prop_label = percent(p, accuracy = 0.1)
+  )</code></pre>
+<pre class="r"><code>## plotting for invitees&#39; perceived benefits
+gaps &lt;- paste0(&quot;&lt;&lt;gap_&quot;, seq_len(length(bnft_order) + 1), &quot;&gt;&gt;&quot;)
+bnft_order_with_gaps &lt;- as.vector(rbind(gaps[-length(gaps)], bnft_order))
+bnft_order_with_gaps &lt;- c(bnft_order_with_gaps, tail(gaps, 1))
+levels_with_gaps &lt;- rev(bnft_order_with_gaps)
+
+# --- build plotting data from benefit_prop_with_err instead of benefit_by_rel ---
+plot_dat &lt;- benefit_prop_with_err %&gt;%
+  select(BNFT_split, rel_type, p, CI_lower, CI_upper) %&gt;%  # &lt;- added CI columns
+  mutate(
+    BNFT_split = factor(BNFT_split, levels = levels_with_gaps),
+    rel_type   = factor(rel_type, levels = c(&quot;Not kin or friend&quot;, &quot;Kin or friend&quot;))
+  ) %&gt;%
+  complete(
+    BNFT_split = factor(levels_with_gaps, levels = levels_with_gaps),
+    rel_type   = levels(rel_type),
+    fill = list(p = 0)
+  ) %&gt;%
+  mutate(
+    BNFT_split = factor(BNFT_split, levels = levels_with_gaps),
+    rel_type   = factor(rel_type, levels = c(&quot;Not kin or friend&quot;, &quot;Kin or friend&quot;))
+  )
+
+eps &lt;- 0.001
+
+# define which benefits get error bars (all real ones)
+show_err &lt;- bnft_order  # &lt;- show error bars for all benefits
+
+plot_dat &lt;- plot_dat %&gt;%
+  mutate(prop_plot = if_else(p == 0, eps, as.numeric(p))) %&gt;%
+  mutate(
+    show_err = !grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, BNFT_split) &amp; as.character(BNFT_split) %in% show_err,
+    CI_lower_plot = ifelse(show_err, CI_lower, NA_real_),
+    CI_upper_plot = ifelse(show_err, CI_upper, NA_real_)
+  ) %&gt;%
+  mutate(
+    BNFT_split = factor(BNFT_split, levels = levels_with_gaps),
+    rel_type   = factor(rel_type, levels = c(&quot;Not kin or friend&quot;, &quot;Kin or friend&quot;))
+  )
+
+axis_lab &lt;- function(x) ifelse(grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, x), &quot;&quot;, x)
+
+ggplot(plot_dat, aes(x = BNFT_split, y = prop_plot, fill = rel_type)) +
+  geom_col(
+    data = dplyr::filter(plot_dat, !grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, BNFT_split)),
+    position = position_dodge(width = 1), width = 0.9
+  ) +
+  geom_col(
+    data = dplyr::filter(plot_dat, grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, BNFT_split)),
+    position = position_dodge(width = 1), width = 1, alpha = 0
+  ) +
+  geom_text(
+    data = dplyr::filter(plot_dat, !grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, BNFT_split)),
+    aes(
+      label = scales::percent_format(accuracy = 0.1)(p),
+      hjust = ifelse(rel_type == &quot;Kin or friend&quot;, 0, 0)
+    ),
+    position = position_dodge(width = 2.8),
+    vjust = 0.5,
+    size = 2.5
+  ) +
+  # error bars &lt;- new
+  geom_errorbar(
+    data = dplyr::filter(plot_dat, !grepl(&quot;^&lt;&lt;gap_\\d+&gt;&gt;$&quot;, BNFT_split) &amp; show_err),
+    aes(
+      x = BNFT_split,
+      ymin = CI_lower_plot,
+      ymax = CI_upper_plot,
+      color = rel_type,
+      group = rel_type
+    ),
+    position = position_dodge(width = 1),
+    width = 0.5,
+    linewidth = 0.5,
+    inherit.aes = FALSE
+  ) +
+  coord_flip() +
+  ylim(0, 0.7) +
+  scale_x_discrete(
+    limits = levels_with_gaps,
+    breaks = bnft_order,
+    labels = axis_lab,
+    drop = FALSE
+  ) +
+  labs(x = &quot;Invitees&#39; perceived benefits from cofarming&quot;, y = &quot;Proportion&quot;, fill = &quot;Relationship&quot;, color = &quot;Relationship&quot;) +
+  scale_fill_manual(
+    values = c(
+      &quot;Kin or friend&quot;     = &quot;mistyrose&quot;,
+      &quot;Not kin or friend&quot; = &quot;lightblue&quot;
+    )
+  ) +
+  scale_color_manual(
+    values = c(
+      &quot;Kin or friend&quot;     = &quot;rosybrown&quot;,
+      &quot;Not kin or friend&quot; = &quot;steelblue&quot;
+    )
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.y = element_text(size = 10),
+    legend.position = &quot;top&quot;,
+    legend.direction = &quot;horizontal&quot;,
+    plot.margin = margin(t = 5, r = 40, b = 5, l = 5)  # &lt;- increase r to push right edge out
+  ) +
+  guides(
+    fill  = guide_legend(reverse = TRUE),
+    color = guide_legend(reverse = TRUE)
+  )</code></pre>
+<pre><code>## Warning: `position_dodge()` requires non-overlapping x intervals.</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<pre class="r"><code># </code></pre>
+<pre class="r"><code># This data comes from sheet 2 of CFP_reason, which only keeps cofarming partnerships that 
+# Create the table to summarize combinations of inviter and invitee perceptions of invitee benefits to test whether self serving misperceptions happen more frequently than other serving ones.
+tab &lt;- matrix(
+  c(18,  9,
+     2, 10),
+  nrow = 2,
+  byrow = TRUE,
+  dimnames = list(
+    inviter = c(&quot;Benefit&quot;, &quot;No benefit&quot;),
+    invitee = c(&quot;Benefit&quot;, &quot;No benefit&quot;)
+  )
+)
+
+mcnemar.test(tab)</code></pre>
+<pre><code>## 
+##  McNemar&#39;s Chi-squared test with continuity correction
+## 
+## data:  tab
+## McNemar&#39;s chi-squared = 3.2727, df = 1, p-value = 0.07044</code></pre>
+<pre class="r"><code>## test whether the prevelance of different division proposals varies by relationship of kin/friends vs. non-kin/non-friends
+## this section prepares the dataframe
+df_divProp = read.xlsx(here(&quot;CF_divProp.xlsx&quot;), sheet=1)
+
+# Keep only unique combinations of cofarming group composition and discussion process
+df_divPropUnique &lt;- df_divProp %&gt;%
+  distinct(
+    `non-HD_proposed`,
+    proposer,
+    `1reaction_to_Prop`,
+    CFP1, CFP2, CFP3, CFP4, CFP5, CFP6, CFP7,
+    .keep_all = TRUE
+  )
+
+removed_instances &lt;- df_divProp %&gt;%
+  filter(!LandID %in% df_divPropUnique$LandID) %&gt;%
+  select(LandID)
+
+# Only keep subsistence crop cofarming
+df_divProp_food &lt;- df_divPropUnique %&gt;%
+  filter(crop_type != &quot;TK&quot;) 
+
+df_divProp_food &lt;- df_divProp_food %&gt;%
+  mutate(
+    proposal_grouped_HDDFLT2HD = case_when(
+      `final_DIV_1Prop_HDDFLT=HD` == &quot;generous_implemented&quot; ~ &quot;generous&quot;,
+      `final_DIV_1Prop_HDDFLT=HD` == &quot;RNDDFLT&quot; ~ &quot;NEEDDFLT&quot;,
+      TRUE ~ `final_DIV_1Prop_HDDFLT=HD`
+    )
+  ) %&gt;%
+  mutate(
+    proposal_grouped_HDDFLT2NoProp = case_when(
+      `final_DIV_1Prop_DFLT=NOPROP` == &quot;generous_implemented&quot; ~ &quot;generous&quot;,
+      TRUE ~ `final_DIV_1Prop_DFLT=NOPROP`
+    )
+  )
+
+df_divProp_food &lt;- df_divProp_food %&gt;%
+  mutate(
+    proposal_grouped_HDDFLT2HD =
+      recode(
+        proposal_grouped_HDDFLT2HD,
+        &quot;HD&quot; = &quot;HD proposed or as default&quot;,
+        &quot;NEEDDFLT&quot; = &quot;need-based division&quot;
+      ),
+    
+    proposal_grouped_HDDFLT2NoProp =
+      recode(
+        proposal_grouped_HDDFLT2NoProp,
+        &quot;HD&quot; = &quot;HD proposed&quot;,
+        &quot;NOPROP&quot; = &quot;No proposal made (a division followed as default)&quot;
+      ),
+    
+    rel_2 =
+      recode(
+        rel_2,
+        &quot;KF&quot; = &quot;kin/friends&quot;,
+        &quot;NN&quot; = &quot;non-kin/non-friends&quot;
+      )
+  )</code></pre>
+<pre class="r"><code>### Option1: adopting a division as the default coded as same as actively proposing it
+
+# Create contingency table
+tab &lt;- table(df_divProp_food$proposal_grouped_HDDFLT2HD,
+             df_divProp_food$rel_2)
+
+tab</code></pre>
+<pre><code>##                            
+##                             kin/friends non-kin/non-friends
+##   generous                            8                   6
+##   HD proposed or as default          34                   9
+##   need-based division                 3                   3
+##   selfish                             1                   1</code></pre>
+<pre class="r"><code># Fisher test for whether the overall prevalence of division proposals differs
+fisher.test(tab)</code></pre>
+<pre><code>## 
+##  Fisher&#39;s Exact Test for Count Data
+## 
+## data:  tab
+## p-value = 0.1575
+## alternative hypothesis: two.sided</code></pre>
+<pre class="r"><code># Plot the distribution of division proposals by relationship type
+df_divProp_food %&gt;%
+  count(rel_2, `proposal_grouped_HDDFLT2HD`) %&gt;%
+  group_by(rel_2) %&gt;%
+  mutate(prop = n / sum(n)) %&gt;%
+  ggplot(aes(rel_2, prop, fill = `proposal_grouped_HDDFLT2HD`)) +
+  
+  geom_col(position = &quot;fill&quot;) +
+  
+  scale_fill_discrete(
+    name = &quot;Proposal type&quot;,
+    labels = c(
+      &quot;HD proposed or as default&quot;,
+      &quot;need-based division&quot;,
+      &quot;generous&quot;,
+      &quot;selfish&quot;
+    )
+  ) +
+  
+  scale_x_discrete(
+    labels = c(
+      &quot;KF&quot; = &quot;kin/friends&quot;,
+      &quot;NN&quot; = &quot;non-kin/non-friends&quot;
+    )
+  ) +
+  
+  labs(
+    title = &quot;Prevalence of initial division proposals&quot;,
+    x = &quot;relationship type&quot;,
+    y = &quot;Proportion&quot;
+  )</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<pre class="r"><code># Prepare the data to test whether the prevalence of HD is different
+df_hd &lt;- df_divProp_food %&gt;%
+  mutate(
+    HD_present =
+      ifelse(
+        proposal_grouped_HDDFLT2HD == &quot;HD proposed or as default&quot;,
+        &quot;HD&quot;,
+        &quot;non-HD&quot;
+      )
+  )
+
+# test whether the prevalence of HD is different
+tab_hd &lt;- table(df_hd$HD_present,
+                df_hd$rel_2)
+
+tab_hd</code></pre>
+<pre><code>##         
+##          kin/friends non-kin/non-friends
+##   HD              34                   9
+##   non-HD          12                  10</code></pre>
+<pre class="r"><code>fisher.test(tab_hd)</code></pre>
+<pre><code>## 
+##  Fisher&#39;s Exact Test for Count Data
+## 
+## data:  tab_hd
+## p-value = 0.04891
+## alternative hypothesis: true odds ratio is not equal to 1
+## 95 percent confidence interval:
+##   0.8909418 11.0791023
+## sample estimates:
+## odds ratio 
+##   3.087253</code></pre>
+<pre class="r"><code># option 2 for testing division proposals based on relationship types: NoProp is a separate category
+# Create contingency table
+tab &lt;- table(
+  df_divProp_food$proposal_grouped_HDDFLT2NoProp,
+  df_divProp_food$rel_2
+)
+
+tab</code></pre>
+<pre><code>##                                                    
+##                                                     kin/friends
+##   generous                                                    8
+##   HD proposed                                                 5
+##   No proposal made (a division followed as default)          32
+##   selfish                                                     1
+##                                                    
+##                                                     non-kin/non-friends
+##   generous                                                            6
+##   HD proposed                                                         1
+##   No proposal made (a division followed as default)                  11
+##   selfish                                                             1</code></pre>
+<pre class="r"><code># Fisher test for whether the overall prevalence of proposal types differs
+fisher.test(tab)</code></pre>
+<pre><code>## 
+##  Fisher&#39;s Exact Test for Count Data
+## 
+## data:  tab
+## p-value = 0.4285
+## alternative hypothesis: two.sided</code></pre>
+<pre class="r"><code># create data for testing whether the prevalence of HD differs
+df_hd &lt;- df_divProp_food %&gt;%
+  mutate(
+    HD_present = ifelse(
+      proposal_grouped_HDDFLT2NoProp == &quot;HD proposed&quot;,
+      &quot;HD&quot;,
+      &quot;non-HD&quot;
+    )
+  )
+
+# testing whether the prevalence of HD differs
+tab_hd &lt;- table(
+  df_hd$HD_present,
+  df_hd$rel_2
+)
+
+tab_hd</code></pre>
+<pre><code>##         
+##          kin/friends non-kin/non-friends
+##   HD               5                   1
+##   non-HD          41                  18</code></pre>
+<pre class="r"><code>fisher.test(tab_hd)</code></pre>
+<pre><code>## 
+##  Fisher&#39;s Exact Test for Count Data
+## 
+## data:  tab_hd
+## p-value = 0.6622
+## alternative hypothesis: true odds ratio is not equal to 1
+## 95 percent confidence interval:
+##    0.2194654 109.4501583
+## sample estimates:
+## odds ratio 
+##   2.172532</code></pre>
+<pre class="r"><code>## test whether the eventual divisions for kin/friends and non-kin/non-friends are different
+df_test &lt;- df_divProp_food %&gt;%
+  mutate(
+    is_HD = division_quan == &quot;0&quot;
+  )
+tab_HD &lt;- table(df_test$rel_2, df_test$is_HD)
+
+fisher.test(tab_HD)</code></pre>
+<pre><code>## 
+##  Fisher&#39;s Exact Test for Count Data
+## 
+## data:  tab_HD
+## p-value = 0.3825
+## alternative hypothesis: true odds ratio is not equal to 1
+## 95 percent confidence interval:
+##  0.1560207 1.9468264
+## sample estimates:
+## odds ratio 
+##  0.5470571</code></pre>
+<pre class="r"><code>## Plot the distribution of divisions based on relationship types
+## MESSY is not plotted. NEED is plotted at 0.5 but labeled as &quot;need&quot;
+df_plot_division &lt;- df_divProp_food %&gt;%
+  mutate(
+    division_quan = str_trim(as.character(division_quan)),
+    rel_2 = str_trim(as.character(rel_2))
+  ) %&gt;%
+  filter(
+    !is.na(division_quan),
+    division_quan != &quot;&quot;,
+    division_quan != &quot;MESSY&quot;
+  ) %&gt;%
+  mutate(
+    division_num = case_when(
+      division_quan == &quot;NEED&quot; ~ 0.5,
+      TRUE ~ suppressWarnings(as.numeric(division_quan))
+    )
+  ) %&gt;%
+  filter(!is.na(division_num)) %&gt;%
+  count(rel_2, division_num, name = &quot;freq&quot;) %&gt;%
+  mutate(
+    rel_2 = recode(
+      rel_2,
+      &quot;KF&quot; = &quot;kin/friends&quot;,
+      &quot;NN&quot; = &quot;non-kin/non-friends&quot;
+    ),
+    rel_2 = factor(
+      rel_2,
+      levels = c(&quot;kin/friends&quot;, &quot;non-kin/non-friends&quot;)
+    )
+  )
+
+ggplot(df_plot_division, aes(x = division_num, y = rel_2)) +
+  geom_point(aes(size = freq), alpha = 0.5) +
+  scale_size_continuous(
+    name = &quot;Frequency&quot;,
+    range = c(2, 8),
+    breaks = sort(unique(df_plot_division$freq))
+  ) +
+  scale_x_continuous(
+    limits = c(-0.05, 1.05),
+    breaks = seq(0, 1, by = 0.1),
+    labels = function(x) ifelse(x == 0.5, &quot;need&quot;, x)
+  ) +
+  labs(
+    title = &quot;Distribution of Division Quantity by Relationship Type&quot;,
+    x = &quot;Harvest share difference between households receiving the most and the least&quot;,
+    y = &quot;Relationship type&quot;
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank()
+  )</code></pre>
+<p><img src="CFG_DivProp_files/figure-html/unnamed-chunk-19-1.png" width="768" /></p>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

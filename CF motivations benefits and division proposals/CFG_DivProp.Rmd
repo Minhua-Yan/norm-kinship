@@ -1,0 +1,943 @@
+---
+title: "socialPayoffs"
+author: "MinhuaYan"
+date: "2025-02-17"
+output: 
+   html_document:
+     self_contained: false
+
+---
+
+```{r}
+library(nnet)
+library(openxlsx)
+library(xtable)
+library(dplyr)
+library(tidyr)
+library(purrr)
+#library(magrittr); requireNamespace("tidyr");
+
+
+library(ggplot2)
+library(ggpattern)
+library(polycor)
+library(data.table)
+library(stringr)
+library(stringi)
+library(forcats)
+library(here)
+library(binom)
+library(scales)
+
+library(rstatix)
+library(brms)
+```
+
+
+```{r fig.align="center", echo = FALSE,fig.width = 8, fig.height = 5}
+df_CFG = read.xlsx(here("CFGroup.xlsx"), sheet=1)
+df_CFG = df_CFG[-c(1),]
+kin <- df_CFG %>%
+  select("CFP1","CFP2","CFP3","CFP4","CFP5","CFP6","CFP7","CFP8","num_CF_HH","involves","area","crop_type","div_no_NOorYAMorVEGGIE_diff") %>%
+  mutate(involves = replace(involves,involves=="niece"|involves=="nephew"|involves=="half_SIB","niece/nephew/half sibling")) 
+
+kin$involves = stri_replace_all_regex(kin$involves,
+                                  pattern=c('PO','SIB','AFF','DISTKIN','PERCKIN', 'NON'),
+                                  replacement=c("parent-offspring",'siblings','affinal kin','distant kin','perceived kin',"not kin or friend"),
+                                  vectorize=FALSE)
+
+
+
+
+kin_count = kin %>%
+  group_by(involves) %>%
+  summarise(count = n())
+
+
+relation_order = c("parent-offspring","siblings","niece/nephew/half sibling","cousin","affinal kin","distant kin","friend","perceived kin","not kin or friend")
+
+kin_count = kin_count %>%
+   mutate(involves= factor(involves, levels = relation_order, ordered = TRUE))
+
+kin_count$involves <- fct_rev(kin_count$involves)
+
+ggplot(kin_count, aes(x = involves, y = count)) +
+  geom_bar(stat = "identity", fill = "pink", width = 0.5) +
+  labs(title = "Dstribution of Cofarming Group Composition", x = "Weakest tie to the organizer", y = "Number of cofarming groups") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(hjust = 1),
+    plot.title = element_text(hjust = 0.5),
+    axis.title=element_text(size=14),axis.text = element_text(size=12, color="black"),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  ) +
+     coord_flip()
+```
+
+```{r}
+# dataframe of land farmed by each kin group
+# prepare data
+kin_area = kin %>%
+  filter(area != "NAPP" & div_no_NOorYAMorVEGGIE_diff != "NEED")
+
+kin_area$area = as.numeric(kin_area$area)
+kin_area$num_CF_HH <- as.numeric(as.character(kin_area$num_CF_HH))
+
+kin_area <- kin_area %>%
+  mutate(area_perHH = area / num_CF_HH)
+
+```
+
+```{r, fig.width = 10, fig.height = 5}
+# This next section creates plotting dataframes to plot area farmed per CFG
+# Count frequency of each area value within each 'involves' group
+kin_area_count_CFG <-  kin_area %>%
+  group_by(involves, area) %>%
+  summarise(freq = n(), .groups = "drop")
+
+# Compute mean and standard deviation per 'involves' group
+summary_stats <-  kin_area %>%
+  group_by(involves) %>%
+  summarise(
+    mean_area = mean(area),
+    sd_area = sd(area),
+    .groups = "drop"
+  )
+
+# Merge data for plotting
+df_plot1 <- left_join(kin_area_count_CFG, summary_stats, by = "involves")
+df_plot1$involves <- factor(df_plot1$involves, levels = relation_order)
+
+# Create the plot
+ggplot(df_plot1, aes(x = involves)) +
+  # Error bars (±1 SD)
+  geom_errorbar(aes(ymin = mean_area - sd_area, ymax = mean_area + sd_area),
+                width = 0.2, color = "black") +
+  
+  # Red horizontal line at mean (corrected)
+  geom_segment(aes(x = as.numeric(involves) - 0.3,
+                   xend = as.numeric(involves) + 0.3,
+                   y = mean_area,
+                   yend = mean_area),
+               color = "red", linewidth = 1.2) +
+  
+  # Scatter dots with size = frequency
+  geom_point(aes(y = area, size = sqrt(freq)),
+             alpha = 0.6)  +
+  scale_size_continuous(
+    range = c(1, 2),             # Radius: freq = 1 → 1 mm, freq = 2 → 2 mm
+    breaks = sqrt(c(1, 2)),      # Legend: use sqrt(freq) values
+    labels = c(1, 2),            # Show actual frequency values
+    name = "Frequency"
+  )  +
+  labs(
+    title = "Cofarming groups' land area co-farmed by relationship category",
+    x = "Relationship category",
+    y = "Area (Mu)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10), plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r, fig.width = 10, fig.height = 5}
+# This next section manipulates the data to plot area farmed per HH
+# Count frequency of each area value within each 'involves' group
+kin_area_count_HH <-  kin_area %>%
+  group_by(involves, area_perHH) %>%
+  summarise(freq = n(), .groups = "drop")
+
+# Compute mean and standard deviation per 'involves' group
+summary_stats <-  kin_area %>%
+  group_by(involves) %>%
+  summarise(
+    mean_area = mean(area_perHH),
+    sd_area = sd(area_perHH),
+    .groups = "drop"
+  )
+
+# Merge data for plotting
+df_plot2 <- left_join(kin_area_count_HH, summary_stats, by = "involves")
+df_plot2$involves <- factor(df_plot2$involves, levels = relation_order)
+
+# Create the plot
+ggplot(df_plot2, aes(x = involves)) +
+  # Error bars (±1 SD)
+  geom_errorbar(aes(ymin = mean_area - sd_area, ymax = mean_area + sd_area),
+                width = 0.2, color = "black") +
+  
+  # Red horizontal line at mean (corrected)
+  geom_segment(aes(x = as.numeric(involves) - 0.3,
+                   xend = as.numeric(involves) + 0.3,
+                   y = mean_area,
+                   yend = mean_area),
+               color = "red", linewidth = 1.2) +
+  
+  # Scatter dots with size = frequency
+  geom_point(aes(y = area_perHH, size = freq),
+             alpha = 0.6)   +
+   scale_size_continuous(
+     range = c(1, 2),             # Radius: freq = 1 → 1 mm, freq = 2 → 2 mm
+     breaks = sqrt(c(1, 2)),      # Legend: use sqrt(freq) values
+     labels = c(1, 2),            # Show actual frequency values
+     name = "Frequency"
+   ) +
+  labs(
+    title = "Per-household land area co-farmed by relationship category",
+    x = "Relationship category",
+    y = "Area (Mu)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10), plot.title = element_text(hjust = 0.5))
+```
+
+
+
+```{r}
+df_CFPrsn = read.xlsx(here("CFP_reason.xlsx"), sheet=1)
+
+# Remove substrings that include additional info: "()"
+df_CFPrsn$organizer_RSN <- gsub(" \\(.*?\\)", "", df_CFPrsn$organizer_RSN)
+
+# Vector of the column names to sort
+cfp_cols <- paste0("CFP", 1:7)
+
+
+# sort the CF partnerships based on CFP1 to  CFP7
+df_CFPrsn <- df_CFPrsn %>%
+  arrange(across(all_of(cfp_cols)))
+
+
+df_inviterMotive <- df_CFPrsn %>%
+  filter(!is.na(organizer_RSN), organizer_RSN != "MISSING")
+
+```
+
+```{r}
+# motives for an inviter to propose cofarming
+reason_counts_by_rel <- df_inviterMotive %>%
+  # Step 1: split comma-separated RSN values into lists
+  mutate(RSN_split = str_split(organizer_RSN, ",")) %>%
+  # Step 2: unnest so each reason has its own row
+  unnest(RSN_split) %>%
+  # Step 3: trim spaces
+  mutate(RSN_split = str_trim(RSN_split)) %>%
+  # Step 4: create a flag for NON vs Kin/Friend
+  mutate(rel_type = if_else(relationship == "NON", "Not kin or friend", "Kin or friend")) %>%
+  # Step 5: count per reason and relationship type
+  count(RSN_split, rel_type, name = "freq") %>%
+  arrange(RSN_split, rel_type)
+  
+singletons <- reason_counts_by_rel %>%
+  group_by(RSN_split) %>%
+  summarise(total_freq = sum(freq, na.rm = TRUE), .groups = "drop") %>%
+  filter(total_freq == 1) %>%
+  pull(RSN_split)
+
+# 2) Replace singletons with "Other reasons" and re-aggregate
+reason_prop_by_rel <- reason_counts_by_rel %>%
+  mutate(
+    RSN_split = if_else(RSN_split %in% singletons, "Other reasons", RSN_split)
+  ) %>%
+  group_by(RSN_split, rel_type) %>%
+  summarise(freq = sum(freq, na.rm = TRUE), .groups = "drop") %>%
+  # 3) compute prop within each relationship
+  group_by(rel_type) %>%
+  mutate(prop = round(freq / sum(freq, na.rm = TRUE), 3)) %>%
+  ungroup()
+  
+
+rsn_order = c("Resource complementarity",  'Pool labor', "Pool seeds", "Inviter wants to help invitee(s)", 'Inviter needs help from invitee(s)', 'Cofarming merely because the cofarmers are kin or friends',  "Cofarming more land due to existing cofarming", "Cofarming because the crop is yam",  "Other Reasons", "No Reason")
+
+
+reason_prop_by_rel$RSN_split = stri_replace_all_regex(reason_prop_by_rel$RSN_split,
+                    pattern=c('Complement','POOLLB',"POOLSEED",'HELPCFP','NEEDinput','Bond', 'EXISTCF', "YAM",  "Other reasons", "NOREASON"),
+                                  replacement=rsn_order,
+                                  vectorize=FALSE)
+
+reason_prop_with_err <- reason_prop_by_rel %>%
+  # Ensure the two keys exist and fill missing combos with freq = 0
+  complete(rel_type, RSN_split, fill = list(freq = 0)) %>%
+  group_by(rel_type) %>%
+  mutate(
+    n_total = sum(freq, na.rm = TRUE),
+    x = freq,
+    p = if_else(n_total > 0, x / n_total, NA_real_)
+  ) %>%
+  rowwise() %>%
+  mutate(
+    CI_lower = if (n_total > 0) binom.confint(x, n_total, method = "exact", conf.level = 0.90)$lower else NA_real_,
+    CI_upper = if (n_total > 0) binom.confint(x, n_total, method = "exact", conf.level = 0.90)$upper else NA_real_
+  ) %>%
+  ungroup() %>%
+  mutate(
+    prop_label = percent(p, accuracy = 0.1)
+  )
+```
+
+
+
+
+```{r}
+# preparation for plotting inviter motives
+gaps <- paste0("<<gap_", seq_len(length(rsn_order) + 1), ">>")
+# interleave: gap1, reason1, gap2, reason2, ..., gapN, reasonN, gapN+1
+rsn_order_with_gaps <- as.vector(rbind(gaps[-length(gaps)], rsn_order))
+rsn_order_with_gaps <- c(rsn_order_with_gaps, tail(gaps, 1))
+
+# reverse so the first reason appears at TOP after coord_flip()
+levels_with_gaps <- rev(rsn_order_with_gaps)
+
+# --- build plotting data; keep factor THROUGH complete() ---
+plot_dat2 <- reason_prop_with_err %>%
+  select(RSN_split, rel_type, prop, CI_lower, CI_upper) %>%
+  mutate(
+    RSN_split = factor(RSN_split, levels = levels_with_gaps),
+    rel_type  = factor(rel_type, levels = c("Not kin or friend","Kin or friend"))
+  ) %>%
+  complete(
+    RSN_split = factor(levels_with_gaps, levels = levels_with_gaps),  # <- pass factor
+    rel_type  = levels(rel_type),
+    fill = list(prop = 0)
+  ) %>%
+  mutate(RSN_split = factor(RSN_split, levels = levels_with_gaps),
+         rel_type  = factor(rel_type, levels = c("Not kin or friend","Kin or friend")))    # reassert
+
+
+eps <- 0.001  # tiny visible height for zeros
+
+show_err <-  c("Resource complementarity",  'Pool labor', "Pool seeds", "Inviter wants to help invitee(s)", 'Inviter needs help from invitee(s)', 'Cofarming merely because the cofarmers are kin or friends',  "Cofarming more land due to existing cofarming", "Cofarming because the crop is yam",  "Other Reasons", "No Reason")
+
+plot_dat2 <- plot_dat2 %>%
+  mutate(prop_plot = if_else(prop == 0, eps, as.numeric(prop))) %>%
+    mutate(
+    show_err = !grepl("^<<gap_\\d+>>$", RSN_split) & as.character(RSN_split) %in% show_err,
+    CI_lower_plot = ifelse(show_err, CI_lower, NA_real_),
+    CI_upper_plot = ifelse(show_err, CI_upper, NA_real_)
+  ) %>%
+  mutate(RSN_split = factor(RSN_split, levels = levels_with_gaps),
+         rel_type  = factor(rel_type, levels = c("Not kin or friend","Kin or friend")))   # reassert 
+
+
+# helper to hide gap labels
+axis_lab <- function(x) ifelse(grepl("^<<gap_\\d+>>$", x), "", x)
+
+```
+
+
+```{r fig.align="center", echo = FALSE,fig.width = 10, fig.height = 7}
+# plot inviter motives
+ggplot(plot_dat2, aes(x = RSN_split, y = prop_plot, fill = rel_type)) +
+  # real bars
+  geom_col(
+    data = dplyr::filter(plot_dat2, !grepl("^<<gap_\\d+>>$", RSN_split)),
+    position = position_dodge(width=1), width = 0.9
+  ) +
+  # invisible gap bars (just to reserve space)
+  geom_col(
+    data = dplyr::filter(plot_dat2, grepl("^<<gap_\\d+>>$", RSN_split)),
+    position = position_dodge(width=1), width = 1, alpha = 0
+  ) +
+  # labels on real bars (left for kin, right for not-kin)
+  geom_text(
+    data = dplyr::filter(plot_dat2, !grepl("^<<gap_\\d+>>$", RSN_split)),
+    aes(
+      label = scales::percent_format(accuracy = 0.1)(prop),
+      hjust = ifelse(rel_type == "Kin or friend", 0, 0)  # left vs right
+    ),
+    position = position_dodge(width=2.8),
+    vjust = 0.5,
+    size = 2.5
+  ) +
+  # error bars: give them their own aes and DO NOT inherit
+  geom_errorbar(
+    data = dplyr::filter(plot_dat2, !grepl("^<<gap_\\d+>>$", RSN_split) & show_err),
+    aes(
+      x = RSN_split,                      # <- must be explicit when inherit.aes = FALSE
+      ymin = CI_lower_plot,
+      ymax = CI_upper_plot,
+      color = rel_type,                   # map color so scale_color_manual() applies
+      group = rel_type
+    ),
+    position = position_dodge(width=1),
+    width = 0.5,
+    linewidth = 0.5,
+    inherit.aes = FALSE
+  ) +
+  coord_flip() +
+  # use cartesian zoom if you want to “clip” without dropping rows:
+  # coord_cartesian(ylim = c(-0.1, 0.6)) +
+  scale_x_discrete(
+    limits = levels_with_gaps,            # keep full order incl. gaps
+    breaks = rsn_order,                   # ticks only at real reasons
+    labels = axis_lab,
+    drop = FALSE
+  ) +
+  labs(x = "Inviters' motives for proposing cofarming", y = "Proportion", fill = "Relationship", color = "Relationship") +
+  # manual colors for bars (fill)
+  scale_fill_manual(
+    values = c(
+      "Kin or friend"     = "mistyrose",
+      "Not kin or friend" = "lightblue"
+    )
+  ) +
+  # manual colors for error bars (line color)
+  scale_color_manual(
+    values = c(
+      "Kin or friend"     = "rosybrown",
+      "Not kin or friend" = "steelblue"
+    )
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.title.y = element_text(hjust = 1.0),
+    legend.position = "top",
+    legend.direction = "horizontal",
+    plot.margin = margin(t = 5, r = 40, b = 5, l = 5) 
+  ) +
+  guides(
+    fill  = guide_legend(reverse = TRUE),
+    color = guide_legend(reverse = TRUE)   # or use "none" to hide duplicate
+  )
+
+```
+
+
+
+```{r}
+# fisher's exact test for whether the prevalance of a reason differs based on relationship type
+results <- reason_prop_with_err %>%
+  group_by(RSN_split) %>%
+  summarise(
+    test = list({
+      # Build 2×2 table for this reason
+      tab <- matrix(
+        c(
+          sum(freq[rel_type == "Kin or friend"]),        # successes in kin/friend
+          unique(n_total[rel_type == "Kin or friend"]) - sum(freq[rel_type == "Kin or friend"]),  # failures in kin/friend
+          sum(freq[rel_type == "Not kin or friend"]),    # successes in not kin/friend
+          unique(n_total[rel_type == "Not kin or friend"]) - sum(freq[rel_type == "Not kin or friend"]) # failures in not kin/friend
+        ),
+        nrow = 2,
+        byrow = TRUE,
+        dimnames = list(
+          rel_type = c("Kin/friend", "Not kin/friend"),
+          outcome  = c("Reason present", "Reason absent")
+        )
+      )
+
+      fisher.test(tab)  # use exact test (robust with small n and 0’s)
+    }),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    p_value   = map_dbl(test, ~ .x$p.value),
+    estimate  = map_dbl(test, ~ ifelse(is.null(.x$estimate), NA_real_, .x$estimate)),
+    conf_low  = map_dbl(test, ~ ifelse(is.null(.x$conf.int), NA_real_, .x$conf.int[1])),
+    conf_high = map_dbl(test, ~ ifelse(is.null(.x$conf.int), NA_real_, .x$conf.int[2]))
+  ) %>%
+  select(-test)
+
+results
+```
+
+```{r}
+# Distribution of non-organizers' reported benefits of CF compared to IF
+df_CFPbnft = df_CFPrsn %>%
+  filter(!is.na(invitee_benefit), invitee_benefit != "MISSING") %>%
+  mutate(invitee_benefit = recode(invitee_benefit,
+                        "PRFIF"   = "PRFIForLSHH",
+                        "PRFLSHH" = "PRFIForLSHH"))
+  
+
+benefit_by_rel <- df_CFPbnft %>%
+  # Step 0: remove information about which respondent reported which benefit
+  mutate(invitee_benefit = gsub("SB[^:]+: ", "", invitee_benefit)) %>%
+  # Step 1: split comma-separated benefits values into lists
+  mutate(BNFT_split = str_split(invitee_benefit, ";")) %>%
+  # Step 2: unnest so each reason has its own row
+  unnest(BNFT_split) %>%
+  # Step 3: trim spaces
+  mutate(BNFT_split = str_trim(BNFT_split)) %>%
+  # Step 4: create a flag for NON vs Kin/Friend
+  mutate(rel_type = if_else(relationship == "NON", "Not kin or friend", "Kin or friend")) %>%
+  # Step 5: count per reason and relationship type
+  count(BNFT_split, rel_type, name = "freq") %>%
+  arrange(BNFT_split, rel_type) %>%
+  # 3) compute prop within each relationship
+  group_by(rel_type) %>%
+  mutate(prop = round(freq / sum(freq, na.rm = TRUE), 3)) %>%
+  ungroup()
+
+bnft_order = c("Partner(s) provide resources","Resource complementarity",'Pool labor', "Co-farming has no benefit", "Prefers single-household farming or smaller-group co-farming")
+
+benefit_by_rel$BNFT_split = stri_replace_all_regex(benefit_by_rel$BNFT_split,
+                    pattern=c('INPUT','Ecological Complementarity','POOLLB','NOBNFT','PRFIForLSHH'),
+                                  replacement=bnft_order,
+                                  vectorize=FALSE)
+
+benefit_prop_with_err <- benefit_by_rel %>%
+  complete(rel_type, BNFT_split, fill = list(freq = 0)) %>%
+  group_by(rel_type) %>%
+  mutate(
+    n_total = sum(freq, na.rm = TRUE),
+    x = freq,
+    p = if_else(n_total > 0, x / n_total, NA_real_)
+  ) %>%
+  rowwise() %>%
+  mutate(
+    CI_lower = if (n_total > 0) binom.confint(x, n_total, method = "exact", conf.level = 0.90)$lower else NA_real_,
+    CI_upper = if (n_total > 0) binom.confint(x, n_total, method = "exact", conf.level = 0.90)$upper else NA_real_
+  ) %>%
+  ungroup() %>%
+  mutate(
+    prop_label = percent(p, accuracy = 0.1)
+  )
+```
+
+```{r}
+## plotting for invitees' perceived benefits
+gaps <- paste0("<<gap_", seq_len(length(bnft_order) + 1), ">>")
+bnft_order_with_gaps <- as.vector(rbind(gaps[-length(gaps)], bnft_order))
+bnft_order_with_gaps <- c(bnft_order_with_gaps, tail(gaps, 1))
+levels_with_gaps <- rev(bnft_order_with_gaps)
+
+# --- build plotting data from benefit_prop_with_err instead of benefit_by_rel ---
+plot_dat <- benefit_prop_with_err %>%
+  select(BNFT_split, rel_type, p, CI_lower, CI_upper) %>%  # <- added CI columns
+  mutate(
+    BNFT_split = factor(BNFT_split, levels = levels_with_gaps),
+    rel_type   = factor(rel_type, levels = c("Not kin or friend", "Kin or friend"))
+  ) %>%
+  complete(
+    BNFT_split = factor(levels_with_gaps, levels = levels_with_gaps),
+    rel_type   = levels(rel_type),
+    fill = list(p = 0)
+  ) %>%
+  mutate(
+    BNFT_split = factor(BNFT_split, levels = levels_with_gaps),
+    rel_type   = factor(rel_type, levels = c("Not kin or friend", "Kin or friend"))
+  )
+
+eps <- 0.001
+
+# define which benefits get error bars (all real ones)
+show_err <- bnft_order  # <- show error bars for all benefits
+
+plot_dat <- plot_dat %>%
+  mutate(prop_plot = if_else(p == 0, eps, as.numeric(p))) %>%
+  mutate(
+    show_err = !grepl("^<<gap_\\d+>>$", BNFT_split) & as.character(BNFT_split) %in% show_err,
+    CI_lower_plot = ifelse(show_err, CI_lower, NA_real_),
+    CI_upper_plot = ifelse(show_err, CI_upper, NA_real_)
+  ) %>%
+  mutate(
+    BNFT_split = factor(BNFT_split, levels = levels_with_gaps),
+    rel_type   = factor(rel_type, levels = c("Not kin or friend", "Kin or friend"))
+  )
+
+axis_lab <- function(x) ifelse(grepl("^<<gap_\\d+>>$", x), "", x)
+
+ggplot(plot_dat, aes(x = BNFT_split, y = prop_plot, fill = rel_type)) +
+  geom_col(
+    data = dplyr::filter(plot_dat, !grepl("^<<gap_\\d+>>$", BNFT_split)),
+    position = position_dodge(width = 1), width = 0.9
+  ) +
+  geom_col(
+    data = dplyr::filter(plot_dat, grepl("^<<gap_\\d+>>$", BNFT_split)),
+    position = position_dodge(width = 1), width = 1, alpha = 0
+  ) +
+  geom_text(
+    data = dplyr::filter(plot_dat, !grepl("^<<gap_\\d+>>$", BNFT_split)),
+    aes(
+      label = scales::percent_format(accuracy = 0.1)(p),
+      hjust = ifelse(rel_type == "Kin or friend", 0, 0)
+    ),
+    position = position_dodge(width = 2.8),
+    vjust = 0.5,
+    size = 2.5
+  ) +
+  # error bars <- new
+  geom_errorbar(
+    data = dplyr::filter(plot_dat, !grepl("^<<gap_\\d+>>$", BNFT_split) & show_err),
+    aes(
+      x = BNFT_split,
+      ymin = CI_lower_plot,
+      ymax = CI_upper_plot,
+      color = rel_type,
+      group = rel_type
+    ),
+    position = position_dodge(width = 1),
+    width = 0.5,
+    linewidth = 0.5,
+    inherit.aes = FALSE
+  ) +
+  coord_flip() +
+  ylim(0, 0.7) +
+  scale_x_discrete(
+    limits = levels_with_gaps,
+    breaks = bnft_order,
+    labels = axis_lab,
+    drop = FALSE
+  ) +
+  labs(x = "Invitees' perceived benefits from cofarming", y = "Proportion", fill = "Relationship", color = "Relationship") +
+  scale_fill_manual(
+    values = c(
+      "Kin or friend"     = "mistyrose",
+      "Not kin or friend" = "lightblue"
+    )
+  ) +
+  scale_color_manual(
+    values = c(
+      "Kin or friend"     = "rosybrown",
+      "Not kin or friend" = "steelblue"
+    )
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.y = element_text(size = 10),
+    legend.position = "top",
+    legend.direction = "horizontal",
+    plot.margin = margin(t = 5, r = 40, b = 5, l = 5)  # <- increase r to push right edge out
+  ) +
+  guides(
+    fill  = guide_legend(reverse = TRUE),
+    color = guide_legend(reverse = TRUE)
+  )
+```
+```{r}
+# #
+# # Define which reasons/benefits indicate "invitee benefited"
+# inviter_benefit_reasons <- c(
+#   "Complement",  # = Resource complementarity from inviter's perspective
+#   "Help Invitee(s)",             # = Inviter wants to help invitee(s)
+#   "Pool Labor",
+#   "Pool Seeds"
+# )
+# 
+# invitee_benefit_reasons <- c(
+#   "Ecological Complementarity",  # = Resource complementarity from invitee's perspective
+#   "Partner(s) Provide Inputs",   # = Partner(s) provide resources
+#   "Pool Labor"
+# )
+# 
+# # --- Compute counts per rel_type ---
+# 
+# # From inviter's perspective: how many cofarming groups did the inviter
+# # believe the invitee benefited, out of all groups in that rel_type
+# inviter_counts <- reason_prop_by_rel %>%
+#   group_by(rel_type) %>%
+#   summarise(
+#     # total number of cofarming groups (unique dyads), i.e. denominator
+#     n_total = sum(freq[RSN_split == first(RSN_split)]),  # any one reason gives n
+#     # number where inviter believed invitee benefited (any of the benefit reasons)
+#     x = sum(freq[RSN_split %in% inviter_benefit_reasons]),
+#     .groups = "drop"
+#   ) %>%
+#   mutate(perspective = "Inviter")
+# 
+# # From invitee's perspective: how many invitees believed they benefited,
+# # out of all invitees in that rel_type
+# invitee_counts <- benefit_by_rel %>%
+#   group_by(rel_type) %>%
+#   summarise(
+#     n_total = sum(freq[BNFT_split == first(BNFT_split)]),
+#     x = sum(freq[BNFT_split %in% invitee_benefit_reasons]),
+#     .groups = "drop"
+#   ) %>%
+#   mutate(perspective = "Invitee")
+# 
+# # --- Run one-sided Fisher's exact test per rel_type ---
+# # H0: invitee-perceived benefit rate <= inviter-perceived benefit rate
+# # H1: invitee-perceived benefit rate >  inviter-perceived benefit rate
+# 
+# results <- bind_rows(inviter_counts, invitee_counts) %>%
+#   arrange(rel_type, perspective) %>%
+#   group_by(rel_type) %>%
+#   summarise(
+#     test = list({
+#       # rows: perspective (Invitee, Inviter); cols: benefited, not benefited
+#       tab <- matrix(
+#         c(
+#           x[perspective == "Invitee"],
+#           n_total[perspective == "Invitee"] - x[perspective == "Invitee"],
+#           x[perspective == "Inviter"],
+#           n_total[perspective == "Inviter"] - x[perspective == "Inviter"]
+#         ),
+#         nrow = 2,
+#         byrow = TRUE,
+#         dimnames = list(
+#           perspective = c("Invitee", "Inviter"),
+#           outcome     = c("Benefited", "Not benefited")
+#         )
+#       )
+#       # alternative = "greater": tests if invitee rate > inviter rate
+#       fisher.test(tab, alternative = "greater")
+#     }),
+#     .groups = "drop"
+#   ) %>%
+#   mutate(
+#     p_value  = map_dbl(test, ~ .x$p.value),
+#     odds_ratio = map_dbl(test, ~ ifelse(is.null(.x$estimate), NA_real_, .x$estimate)),
+#     conf_low   = map_dbl(test, ~ ifelse(is.null(.x$conf.int), NA_real_, .x$conf.int[1])),
+#     conf_high  = map_dbl(test, ~ ifelse(is.null(.x$conf.int), NA_real_, .x$conf.int[2]))
+#   ) %>%
+#   select(-test)
+# 
+# print(results)
+```
+
+```{r}
+# This data comes from sheet 2 of CFP_reason, which only keeps cofarming partnerships that 
+# Create the table to summarize combinations of inviter and invitee perceptions of invitee benefits to test whether self serving misperceptions happen more frequently than other serving ones.
+tab <- matrix(
+  c(18,  9,
+     2, 10),
+  nrow = 2,
+  byrow = TRUE,
+  dimnames = list(
+    inviter = c("Benefit", "No benefit"),
+    invitee = c("Benefit", "No benefit")
+  )
+)
+
+mcnemar.test(tab)
+```
+
+```{r}
+## test whether the prevelance of different division proposals varies by relationship of kin/friends vs. non-kin/non-friends
+## this section prepares the dataframe
+df_divProp = read.xlsx(here("CF_divProp.xlsx"), sheet=1)
+
+# Keep only unique combinations of cofarming group composition and discussion process
+df_divPropUnique <- df_divProp %>%
+  distinct(
+    `non-HD_proposed`,
+    proposer,
+    `1reaction_to_Prop`,
+    CFP1, CFP2, CFP3, CFP4, CFP5, CFP6, CFP7,
+    .keep_all = TRUE
+  )
+
+removed_instances <- df_divProp %>%
+  filter(!LandID %in% df_divPropUnique$LandID) %>%
+  select(LandID)
+
+# Only keep subsistence crop cofarming
+df_divProp_food <- df_divPropUnique %>%
+  filter(crop_type != "TK") 
+
+df_divProp_food <- df_divProp_food %>%
+  mutate(
+    proposal_grouped_HDDFLT2HD = case_when(
+      `final_DIV_1Prop_HDDFLT=HD` == "generous_implemented" ~ "generous",
+      `final_DIV_1Prop_HDDFLT=HD` == "RNDDFLT" ~ "NEEDDFLT",
+      TRUE ~ `final_DIV_1Prop_HDDFLT=HD`
+    )
+  ) %>%
+  mutate(
+    proposal_grouped_HDDFLT2NoProp = case_when(
+      `final_DIV_1Prop_DFLT=NOPROP` == "generous_implemented" ~ "generous",
+      TRUE ~ `final_DIV_1Prop_DFLT=NOPROP`
+    )
+  )
+
+df_divProp_food <- df_divProp_food %>%
+  mutate(
+    proposal_grouped_HDDFLT2HD =
+      recode(
+        proposal_grouped_HDDFLT2HD,
+        "HD" = "HD proposed or as default",
+        "NEEDDFLT" = "need-based division"
+      ),
+    
+    proposal_grouped_HDDFLT2NoProp =
+      recode(
+        proposal_grouped_HDDFLT2NoProp,
+        "HD" = "HD proposed",
+        "NOPROP" = "No proposal made (a division followed as default)"
+      ),
+    
+    rel_2 =
+      recode(
+        rel_2,
+        "KF" = "kin/friends",
+        "NN" = "non-kin/non-friends"
+      )
+  )
+
+```
+
+
+
+```{r}
+### Option1: adopting a division as the default coded as same as actively proposing it
+
+# Create contingency table
+tab <- table(df_divProp_food$proposal_grouped_HDDFLT2HD,
+             df_divProp_food$rel_2)
+
+tab
+
+# Fisher test for whether the overall prevalence of division proposals differs
+fisher.test(tab)
+
+# Plot the distribution of division proposals by relationship type
+df_divProp_food %>%
+  count(rel_2, `proposal_grouped_HDDFLT2HD`) %>%
+  group_by(rel_2) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(rel_2, prop, fill = `proposal_grouped_HDDFLT2HD`)) +
+  
+  geom_col(position = "fill") +
+  
+  scale_fill_discrete(
+    name = "Proposal type",
+    labels = c(
+      "HD proposed or as default",
+      "need-based division",
+      "generous",
+      "selfish"
+    )
+  ) +
+  
+  scale_x_discrete(
+    labels = c(
+      "KF" = "kin/friends",
+      "NN" = "non-kin/non-friends"
+    )
+  ) +
+  
+  labs(
+    title = "Prevalence of initial division proposals",
+    x = "relationship type",
+    y = "Proportion"
+  )
+
+# Prepare the data to test whether the prevalence of HD is different
+df_hd <- df_divProp_food %>%
+  mutate(
+    HD_present =
+      ifelse(
+        proposal_grouped_HDDFLT2HD == "HD proposed or as default",
+        "HD",
+        "non-HD"
+      )
+  )
+
+# test whether the prevalence of HD is different
+tab_hd <- table(df_hd$HD_present,
+                df_hd$rel_2)
+
+tab_hd
+
+fisher.test(tab_hd)
+```
+
+```{r}
+# option 2 for testing division proposals based on relationship types: NoProp is a separate category
+# Create contingency table
+tab <- table(
+  df_divProp_food$proposal_grouped_HDDFLT2NoProp,
+  df_divProp_food$rel_2
+)
+
+tab
+
+# Fisher test for whether the overall prevalence of proposal types differs
+fisher.test(tab)
+
+# create data for testing whether the prevalence of HD differs
+df_hd <- df_divProp_food %>%
+  mutate(
+    HD_present = ifelse(
+      proposal_grouped_HDDFLT2NoProp == "HD proposed",
+      "HD",
+      "non-HD"
+    )
+  )
+
+# testing whether the prevalence of HD differs
+tab_hd <- table(
+  df_hd$HD_present,
+  df_hd$rel_2
+)
+
+tab_hd
+
+fisher.test(tab_hd)
+```
+
+```{r}
+## test whether the eventual divisions for kin/friends and non-kin/non-friends are different
+df_test <- df_divProp_food %>%
+  mutate(
+    is_HD = division_quan == "0"
+  )
+tab_HD <- table(df_test$rel_2, df_test$is_HD)
+
+fisher.test(tab_HD)
+
+
+```
+
+```{r fig.width = 8, fig.height = 4}
+## Plot the distribution of divisions based on relationship types
+## MESSY is not plotted. NEED is plotted at 0.5 but labeled as "need"
+df_plot_division <- df_divProp_food %>%
+  mutate(
+    division_quan = str_trim(as.character(division_quan)),
+    rel_2 = str_trim(as.character(rel_2))
+  ) %>%
+  filter(
+    !is.na(division_quan),
+    division_quan != "",
+    division_quan != "MESSY"
+  ) %>%
+  mutate(
+    division_num = case_when(
+      division_quan == "NEED" ~ 0.5,
+      TRUE ~ suppressWarnings(as.numeric(division_quan))
+    )
+  ) %>%
+  filter(!is.na(division_num)) %>%
+  count(rel_2, division_num, name = "freq") %>%
+  mutate(
+    rel_2 = recode(
+      rel_2,
+      "KF" = "kin/friends",
+      "NN" = "non-kin/non-friends"
+    ),
+    rel_2 = factor(
+      rel_2,
+      levels = c("kin/friends", "non-kin/non-friends")
+    )
+  )
+
+ggplot(df_plot_division, aes(x = division_num, y = rel_2)) +
+  geom_point(aes(size = freq), alpha = 0.5) +
+  scale_size_continuous(
+    name = "Frequency",
+    range = c(2, 8),
+    breaks = sort(unique(df_plot_division$freq))
+  ) +
+  scale_x_continuous(
+    limits = c(-0.05, 1.05),
+    breaks = seq(0, 1, by = 0.1),
+    labels = function(x) ifelse(x == 0.5, "need", x)
+  ) +
+  labs(
+    title = "Distribution of Division Quantity by Relationship Type",
+    x = "Harvest share difference between households receiving the most and the least",
+    y = "Relationship type"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+```
