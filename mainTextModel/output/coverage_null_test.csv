@@ -1,4 +1,0 @@
-"category","observed","expected_under_null","p_value_one_sided"
-"both",3,11.6544,2e-04
-"only kin/friends",38,30.8228,0.0189
-"only non",10,8.5228,0.3382
