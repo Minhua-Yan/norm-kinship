@@ -1,0 +1,37 @@
+"ethical_principle","mean","ci_lower","ci_upper","relationship"
+"selfishness",0.0170890925026575,0.0022047583,0.0487871696,"kin/friends"
+"generosity",0.1421682059525,0.02054091005,0.3264378035,"kin/friends"
+"tradition
+ compliance",0.60759285109025,0.355018734,0.808231294,"kin/friends"
+"reward
+ labor",0.03985690815982,0.00346068226,0.1233165055,"kin/friends"
+"reward
+ land",0.02161647957093,0.002232189955,0.0654884481999999,"kin/friends"
+"reward
+ resource",0.0548430029335305,0.002645579635,0.2062777365,"kin/friends"
+"reward labor
+ and land",0.025506004664465,0.002632979975,0.07684991825,"kin/friends"
+"reward labor
+ and resource",0.0312499452652425,0.00285486806,0.0935524891499999,"kin/friends"
+"reward land
+ and resource",0.0225461046228975,0.002260736185,0.0690560673999999,"kin/friends"
+"reward
+ all three",0.0375314052123975,0.003161161735,0.11481419,"kin/friends"
+"selfishness",0.0512631051180575,0.005265084995,0.153507246,"non-kin/non-friends"
+"generosity",0.328128929816975,0.05758791295,0.653232971,"non-kin/non-friends"
+"tradition
+ compliance",0.067694903857765,0.00299246516,0.253570079,"non-kin/non-friends"
+"reward
+ labor",0.076300905576835,0.00604772429,0.242075823,"non-kin/non-friends"
+"reward
+ land",0.0615488687579575,0.005291995275,0.194379343,"non-kin/non-friends"
+"reward
+ resource",0.16100101865495,0.01113136485,0.4623694685,"non-kin/non-friends"
+"reward labor
+ and land",0.0761512483594475,0.00613317509,0.235010761,"non-kin/non-friends"
+"reward labor
+ and resource",0.056372288517075,0.00487917691,0.1724733295,"non-kin/non-friends"
+"reward land
+ and resource",0.0646527949002675,0.004683333185,0.215999506,"non-kin/non-friends"
+"reward
+ all three",0.0568859365517925,0.005061664945,0.1775075265,"non-kin/non-friends"

@@ -1,0 +1,12 @@
+
+	Fisher's Exact Test for Count Data
+
+data:  table_test
+p-value = 0.7751
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.1576452 2.5671600
+sample estimates:
+odds ratio 
+ 0.7165398 
+
